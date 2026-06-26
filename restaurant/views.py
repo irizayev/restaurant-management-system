@@ -121,7 +121,7 @@ class UpdateTableStatusView(APIView):
         except Table.DoesNotExist:
             return Response({'error': 'Table not found.'}, status=404)
         new_status = request.data.get('status')
-        valid = [c[0] for c in Table.STATUS_CHOICES]
+        valid = ['available', 'occupied', 'reserved', 'cleaning']
         if new_status not in valid:
             return Response({'error': f'Invalid status. Choose from: {valid}'}, status=400)
         table.status = new_status
@@ -213,7 +213,7 @@ class UpdateOrderStatusView(APIView):
             return Response({'error': 'Order not found.'}, status=404)
 
         new_status = request.data.get('status')
-        valid = [c[0] for c in Order.STATUS_CHOICES]
+        valid = ['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled']
         if new_status not in valid:
             return Response({'error': f'Choose from: {valid}'}, status=400)
 

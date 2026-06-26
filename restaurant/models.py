@@ -9,7 +9,6 @@ class Category(models.Model):
 
     class Meta:
         verbose_name_plural = 'categories'
-        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -24,32 +23,75 @@ class MenuItem(models.Model):
     is_vegetarian = models.BooleanField(default=False)
     is_vegan = models.BooleanField(default=False)
     is_gluten_free = models.BooleanField(default=False)
-    preparation_time = models.PositiveIntegerField(help_text='Minutes', default=15)
+    preparation_time = models.PositiveIntegerField(default=15)
     calories = models.PositiveIntegerField(null=True, blank=True)
     image_url = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        ordering = ['category', 'name']
-
     def __str__(self):
         return f"{self.name} (${self.price})"
 
 
-class Table(models.Model):
-    STATUS_CHOICES = [
-        ('available', 'Available'),
-        ('occupied', 'Occupied'),
-        ('reserved', 'Reserved'),
-        ('cleaning', 'Cleaning'),
-    ]
+TABLE_STATUS = [
+    ('available', 'Available'),
+    ('occupied', 'Occupied'),
+    ('reserved', 'Reserved'),
+    ('cleaning', 'Cleaning'),
+]
 
+RES_STATUS = [
+    ('pending', 'Pending'),
+    ('confirmed', 'Confirmed'),
+    ('seated', 'Seated'),
+    ('completed', 'Completed'),
+    ('cancelled', 'Cancelled'),
+    ('no_show', 'No Show'),
+]
+
+ORDER_STATUS = [
+    ('pending', 'Pending'),
+    ('confirmed', 'Confirmed'),
+    ('preparing', 'Preparing'),
+    ('ready', 'Ready'),
+    ('served', 'Served'),
+    ('completed', 'Completed'),
+    ('cancelled', 'Cancelled'),
+]
+
+ORDER_TYPE = [
+    ('dine_in', 'Dine In'),
+    ('takeaway', 'Takeaway'),
+    ('delivery', 'Delivery'),
+]
+
+PAY_STATUS = [
+    ('unpaid', 'Unpaid'),
+    ('paid', 'Paid'),
+    ('refunded', 'Refunded'),
+]
+
+PAY_METHOD = [
+    ('cash', 'Cash'),
+    ('card', 'Card'),
+    ('online', 'Online'),
+]
+
+UNIT_CHOICES = [
+    ('kg', 'Kilograms'),
+    ('g', 'Grams'),
+    ('l', 'Liters'),
+    ('ml', 'Milliliters'),
+    ('pcs', 'Pieces'),
+    ('box', 'Box'),
+]
+
+
+class Table(models.Model):
     number = models.PositiveIntegerField(unique=True)
     capacity = models.PositiveIntegerField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
-    location = models.CharField(max_length=100, default='Main Hall',
-                                help_text='e.g. Main Hall, Terrace, Private Room')
+    status = models.CharField(max_length=20, choices=TABLE_STATUS, default='available')
+    location = models.CharField(max_length=100, default='Main Hall')
 
     class Meta:
         ordering = ['number']
@@ -59,22 +101,13 @@ class Table(models.Model):
 
 
 class Reservation(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('seated', 'Seated'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-        ('no_show', 'No Show'),
-    ]
-
     customer_name = models.CharField(max_length=200)
     customer_phone = models.CharField(max_length=20)
     customer_email = models.EmailField(blank=True)
     table = models.ForeignKey(Table, on_delete=models.SET_NULL, null=True, related_name='reservations')
     guest_count = models.PositiveIntegerField()
     reservation_date = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=RES_STATUS, default='pending')
     special_requests = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -84,47 +117,19 @@ class Reservation(models.Model):
         ordering = ['reservation_date']
 
     def __str__(self):
-        return f"{self.customer_name} - Table #{self.table.number if self.table else 'N/A'} at {self.reservation_date}"
+        return f"{self.customer_name} - Table #{self.table.number if self.table else '?'}"
 
 
 class Order(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('preparing', 'Preparing'),
-        ('ready', 'Ready'),
-        ('served', 'Served'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-    ]
-
-    ORDER_TYPE_CHOICES = [
-        ('dine_in', 'Dine In'),
-        ('takeaway', 'Takeaway'),
-        ('delivery', 'Delivery'),
-    ]
-
-    PAYMENT_STATUS_CHOICES = [
-        ('unpaid', 'Unpaid'),
-        ('paid', 'Paid'),
-        ('refunded', 'Refunded'),
-    ]
-
-    PAYMENT_METHOD_CHOICES = [
-        ('cash', 'Cash'),
-        ('card', 'Card'),
-        ('online', 'Online'),
-    ]
-
     table = models.ForeignKey(Table, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     server = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='served_orders')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='dine_in')
+    status = models.CharField(max_length=20, choices=ORDER_STATUS, default='pending')
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE, default='dine_in')
     customer_name = models.CharField(max_length=200, blank=True)
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    payment_status = models.CharField(max_length=20, choices=PAY_STATUS, default='unpaid')
+    payment_method = models.CharField(max_length=20, choices=PAY_METHOD, null=True, blank=True)
     notes = models.TextField(blank=True)
-    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # percentage
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -155,7 +160,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_item = models.ForeignKey(MenuItem, on_delete=models.PROTECT, related_name='order_items')
     quantity = models.PositiveIntegerField(default=1)
-    unit_price = models.DecimalField(max_digits=8, decimal_places=2)  # snapshot at order time
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     special_requests = models.CharField(max_length=300, blank=True)
 
     class Meta:
@@ -175,20 +180,10 @@ class OrderItem(models.Model):
 
 
 class InventoryItem(models.Model):
-    UNIT_CHOICES = [
-        ('kg', 'Kilograms'),
-        ('g', 'Grams'),
-        ('l', 'Liters'),
-        ('ml', 'Milliliters'),
-        ('pcs', 'Pieces'),
-        ('box', 'Box'),
-    ]
-
     name = models.CharField(max_length=200)
     unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    min_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=10,
-                                        help_text='Alert when below this quantity')
+    min_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=10)
     cost_per_unit = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     supplier = models.CharField(max_length=200, blank=True)
     last_restocked = models.DateTimeField(null=True, blank=True)
