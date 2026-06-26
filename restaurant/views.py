@@ -287,7 +287,8 @@ class RestockInventoryView(APIView):
         amount = request.data.get('amount')
         if not amount or float(amount) <= 0:
             return Response({'error': 'Amount must be a positive number.'}, status=400)
-        item.quantity += float(amount)
+        from decimal import Decimal
+        item.quantity += Decimal(str(amount))
         item.last_restocked = timezone.now()
         item.save()
         return Response({
